@@ -1,0 +1,35 @@
+---
+- name: add rpm key for elastic.co
+  rpm_key:
+    key: "{{ filebeat_gpg_url }}"
+
+- name: create beats yum repo
+  yumrepo:
+    name: beats
+    baseurl: "{{ filebeat_repo_url }}"
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: "{{ filebeat_gpg_url }}"
+
+- name: install filebeat
+  yum:
+    name: "filebeat"
+    state: present
+  notify:
+    - restart filebeat
+
+- name: create filebeat.yml
+  template:
+    src: filebeat.yml.j2
+    dest: /etc/filebeat/filebeat.yml
+  notify:
+    - restart filebeat
+
+- name: flush handlers to prevent start then restart
+  meta: flush_handlers
+
+- name: start and enable filebeat
+  service:
+    name: filebeat
+    state: started
+    enabled: true

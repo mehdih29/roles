@@ -1,0 +1,52 @@
+
+
+# Repository settings
+filebeat_gpg_url: https://packages.elastic.co/GPG-KEY-elasticsearch
+
+filebeat_repo_url: https://artifacts.elastic.co/packages/5.x/yum
+
+# `filebeat_config` is templated directly into filebeat.yml for the config.
+# You are expected to override this variable, as these configurations are
+# only suited for development purposes.
+# See https://github.com/elastic/beats/blob/master/filebeat/filebeat.yml for
+# an exhaustive list of configurations.
+kafka_home: /data/kafka
+
+filebeat_config:
+  filebeat:
+    prospectors:
+      - paths:
+          - "{{ kafka_home }}/logs/controller.log*"
+          - "{{ kafka_home }}/logs/server.log*"
+          - "{{ kafka_home }}/logs/state-change.log*"
+          - "{{ kafka_home }}/logs/kafka-*.log*"
+        input_type: log
+        # match multiline events
+        multiline.pattern: '^\['
+        multiline.negate: true
+        multiline.match: after
+        # configure pipeline
+        fields.pipeline: kafka-logs
+
+
+      - paths: 
+          - "{{ kafka_home }}/logs/kafkaServer-gc.log"
+        input_type: log
+        # match multiline events
+        multiline.pattern: '^\s'
+        multiline.negate: false
+        multiline.match: after
+
+        # include only 'GC pause' stats
+        include_lines: ['GC pause']
+
+        # configure pipeline
+        fields.pipeline: kafka-gc-logs
+
+  output:
+    file:
+      path: /tmp/filebeat
+      filename: filebeat
+  logging:
+    to_syslog: true
+    level: error
