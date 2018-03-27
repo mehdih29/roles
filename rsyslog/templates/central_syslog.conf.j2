@@ -1,0 +1,23 @@
+## {{ ansible_managed }}
+# Provides UDP syslog reception
+$ModLoad imudp
+$UDPServerRun 514
+# Provides TCP syslog reception
+$ModLoad imtcp
+$InputTCPServerRun 514
+
+$MaxOpenFiles {{ central_log_maxopenfiles }}
+{% if central_log_extra_settings is defined %}
+{% for extra_setting in central_log_extra_settings %}
+{{ extra_setting }}
+{% endfor %}
+{% endif %}
+
+
+$Template GENERALTEMPLATE,"{{ central_logs_directory }}/%hostname%.log"
+$template LogFmt,"%timereported:::date-rfc3339% %hostname% %syslogseverity-text% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+
+if $fromhost-ip startswith '10.' then {
+	?GENERALTEMPLATE;LogFmt
+	stop
+}
